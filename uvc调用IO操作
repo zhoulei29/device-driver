@@ -4,7 +4,10 @@
    3.19及以上版本：struct v4l2_file_operations-->unlocked_ioctl-->video_ioctl2-->video_usercopy
    -->__video_do_ioctl-->struct v4l2_ioctl_ops *ops=vfd->ioctl_ops(IO操作集是在video_device初始化时
    绑定在video_device中的)-->通过_IOC_NR(cmd)找到操作函数在
-   
+   仍然需要解决的问题：
+   1.info = &v4l2_ioctls[_IOC_NR(cmd)]; _IOC_NR到底表示什么，数据又会是多少
+   2.static struct v4l2_ioctl_info v4l2_ioctls[]  与 struct v4l2_ioctl_ops 存在着什么联系
+   3.ioctl 是如何调用的仍然没有解决
    
    3.19以下版本：struct v4l2_file_operations-->unlocked_ioctl-->uvc_v4l2_ioctl-->video_usercopy
    -->uvc_v4l2_do_ioctl--> switch....case...(通过swicth判断语句来直接判断cmd的类型并去执行相对应的处理函数)
