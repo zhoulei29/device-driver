@@ -1,6 +1,10 @@
 1. 3.19以前的内核版本中并没有将uvc中的ioctl操作函数进行整合为一个struct v4l2_ioctl_ops
-	结构体的v4l2 ioctl的操作集，而是将将每一个不同的ioctl放在 switch...case 中判断执行
-	2. 新旧之间他们的ioctl调用也存在着差异：
-	3.19及以上版本：
-	3.19以下版本：struct v4l2_file_operations-->unlocked_ioctl-->uvc_v4l2_ioctl-->video_usercopy
-	-->uvc_v4l2_do_ioctl--
+结构体的v4l2 ioctl的操作集，而是将将每一个不同的ioctl放在 switch...case 中判断执行
+2. 新旧之间他们的ioctl调用也存在着差异：
+   3.19及以上版本：struct v4l2_file_operations-->unlocked_ioctl-->video_ioctl2-->video_usercopy
+   -->__video_do_ioctl-->struct v4l2_ioctl_ops *ops=vfd->ioctl_ops(IO操作集是在video_device初始化时
+   绑定在video_device中的)-->通过_IOC_NR(cmd)找到操作函数在
+   
+   
+   3.19以下版本：struct v4l2_file_operations-->unlocked_ioctl-->uvc_v4l2_ioctl-->video_usercopy
+   -->uvc_v4l2_do_ioctl--> switch....case...(通过swicth判断语句来直接判断cmd的类型并去执行相对应的处理函数)
