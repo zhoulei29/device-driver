@@ -3,11 +3,31 @@
 2. 新旧之间他们的ioctl调用也存在着差异：
    3.19及以上版本：struct v4l2_file_operations-->unlocked_ioctl-->video_ioctl2-->video_usercopy
    -->__video_do_ioctl-->struct v4l2_ioctl_ops *ops=vfd->ioctl_ops(IO操作集是在video_device初始化时
-   绑定在video_device中的)-->通过_IOC_NR(cmd)找到操作函数在
-   仍然需要解决的问题：
+   绑定在video_device中的)-->如何实现关联的代码实现部分还有待研究！！！-->uvc_ioctl_ops
+   
+   补充：
+      在 __video_do_ioctl()函数中通过cmd找到相对应ioctl的函数的方法：
+      1.通过_IOC_NR(cmd)函数找到cmd命令初始化时的序号（在/include/uapi/linux/videodev2.h中，每个命令都有着不相同的序号）
+      2.通过序号我们可以找到struct v4l2_ioctl_info 结构体对应每个ioctl的信息（比较关键的两个成员为：info->u.offset;info->u.func)
+        并根据匹配结果赋于它们的所属种类（INFO_FL_FUNC或INFO_FL_STD），并将此标志写入flag中。
+      3.根据struct v4l2_ioctl_info 中的flag值判断是INFO_FL_FUNC或是INFO_FL_STD，再做不一样的处理（处理的不同点在下面有提及，见下文）
+        最终它们还是调用了struct v4l2_ioctl_ops uvc_ioctl_ops 中的ioctl操作函数
+        
+        为什么 v4l2_ioctls[_IOC_NR(cmd)]；这一系列的操作就可以找到IO控制指令相对应的info了呢！！！！！（重要）
+        1.我通过struct v4l2_ioctl_info v4l2_ioctls[]中的一个ioctl找到了初始化ioctl代码（放在/include/uapi/linux/videodev2.h中），
+        初始化使用了
+        但是这一步是如何通过 
+        v4l2_ioctls[_IOC_NR(cmd)] 找到struct v4l2_ioctl_info中相对应的ioctl信息并
+        
+        INFO_FL_STD与INFO_FL_FUNC的作用：
+        1.INFO_FL_STD会直接调用到视频设备驱动中video_device->v4l2_ioctl_ops函数集。
+        2.INFO_FL_FUNC会先调用到v4l2自己实现的标准回调函数，然后根据arg再调用到video_device->v4l2_ioctl_ops
+        或v4l2_fh->v4l2_ctrl_handler函数集。（例如：v4l_querybuf-->check_fmt）
+      
+   3.19以下版本：struct v4l2_file_operations-->unlocked_ioctl-->uvc_v4l2_ioctl-->video_usercopy
+   -->uvc_v4l2_do_ioctl--> switch....case...(通过swicth判断语句来直接判断cmd的类型并去执行相对应的处理函数)
+  
+仍然需要解决的问题：
    1.info = &v4l2_ioctls[_IOC_NR(cmd)]; _IOC_NR到底表示什么，数据又会是多少
    2.static struct v4l2_ioctl_info v4l2_ioctls[]  与 struct v4l2_ioctl_ops 存在着什么联系
    3.ioctl 是如何调用的仍然没有解决
-   
-   3.19以下版本：struct v4l2_file_operations-->unlocked_ioctl-->uvc_v4l2_ioctl-->video_usercopy
-   -->uvc_v4l2_do_ioctl--> switch....case...(通过swicth判断语句来直接判断cmd的类型并去执行相对应的处理函数)
